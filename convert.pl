@@ -39,41 +39,57 @@ sub isCycleDate {
   my $dt = shift;
 
   my $t = Time::Piece->strptime($dt, "%Y-%m-%d");
-  my $t2 = Time::Piece->strptime("2021-01-28", "%Y-%m-%d");
+  my $t2 = Time::Piece->strptime("2023-01-26", "%Y-%m-%d");
 
   my $diff = $t - $t2;
   my $days = $diff->days;
   return ($days % 28 == 0);
 }
 
-sub calcCycle {
+sub getFirstCycleDate {
   my $dt = shift;
-  my $year = substr($dt, 2, 2);
-  # cycle iteration is defined as the number of 28 day cycles since the first cycle of the year... so let us find that first
-  my $newdate = "20" . $year . "-01-01";
+
+  my $newdate = "20" . substr($dt, 2, 2) . "-01-01";
   while (!isCycleDate($newdate)) {
     my $t = Time::Piece->strptime($newdate, "%Y-%m-%d");
     $t += ONE_DAY;
     $newdate = $t->strftime("%Y-%m-%d");
   }
-  my $cycle = 1;
-  while (1) {
-    if ($newdate eq $dt) {
-      last;
-    } elsif ($newdate gt $dt) {
-      $cycle--;
-      last;
-    } else {
-      $cycle++;
-      # add 28 days to newdate
-      my $t = Time::Piece->strptime($newdate, "%Y-%m-%d");
-      $t += 28 * ONE_DAY;
-      $newdate = $t->strftime("%Y-%m-%d");
-    }
+
+  return $newdate;
+}
+
+sub numberCyclesInYear {
+  my $year = shift;
+  my $year_first_cycle = getFirstCycleDate($year . "-01-01");
+  my $next_year_first_cycle = getFirstCycleDate(($year + 1) . "-01-01");
+
+  return cyclesBetweenDates($year_first_cycle, $next_year_first_cycle)-1;
+}
+
+sub cyclesBetweenDates {
+  my $dt1 = shift;
+  my $dt2 = shift;
+
+  my $t1 = Time::Piece->strptime($dt1, "%Y-%m-%d");
+  my $t2 = Time::Piece->strptime($dt2, "%Y-%m-%d");
+  my $diff = $t2 - $t1;
+  my $days = $diff->days;
+  return int($days / 28) + 1;
+}
+
+sub calcCycle {
+  my $dt = shift;
+
+  # If $dt is before the first cycle of the year, use the last cycle of last year
+  if ($dt lt getFirstCycleDate($dt)) {
+    my $year = substr($dt, 2, 2) - 1;
+    return sprintf("%02d%02d", $year, numberCyclesInYear(substr($dt, 0, 4)));
   }
-  # zero pad cycle
-  $cycle = sprintf("%02d", $cycle);
-  return $year . $cycle;
+
+  my $year = substr($dt, 2, 2);
+  # cycle iteration is defined as the number of 28 day cycles since the first cycle of the year... so let us find that first
+  return sprintf("%02d%02d", $year, cyclesBetweenDates(getFirstCycleDate($dt), $dt));
 }
 
 sub findDateFromCycle {
@@ -128,8 +144,8 @@ sub parseData {
             $chartType = "OTHER";
           }
           $sth->execute(
-            "FAA-" . $airport->getAttribute("ID") . "-" . $chartType . "-" . $chart->findvalue("./chart_name"),
-            $airport->getAttribute("ID"),
+            "FAA-" . $airport->getAttribute("apt_ident") . "-" . $chartType . "-" . $chart->findvalue("./chart_name"),
+            $airport->getAttribute("apt_ident"),
             $cycle,
             $startdate,
             $enddate,
@@ -188,7 +204,7 @@ plog "Cycle is $cycle";
 plog "Calculating cycle start date";
 my @cycleStartDate = findDateFromCycle($cycle);
 plog "Cycle start date is $cycleStartDate[0] - $cycleStartDate[1]";
-my $dom = XML::LibXML->load_xml(location => 'd-tpp-small-pretty.xml');
+
 plog "Connecting to database";
 connectDB();
 
