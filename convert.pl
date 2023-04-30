@@ -112,7 +112,7 @@ sub findDateFromCycle {
 sub connectDB {
   $dbh = DBI->connect(
     "DBI:mysql:database=" . $ENV{DB_DATABASE} . ";host=" . $ENV{DB_HOST} . ";port=" . $ENV{DB_PORT},
-    $ENV{DB_USERNAME},
+    $ENV{DB_USER},
     $ENV{DB_PASSWORD},
     { RaiseError => 1, AutoCommit => 0 },
   ) or die $DBI::errstr;
