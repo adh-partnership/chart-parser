@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     libdbi-perl \
     libmariadb-dev \
     && rm -rf /var/lib/apt/lists/* \
-    && cpanm install DateTime DBI Dotenv LWP::UserAgent Time::Moment Time::Piece Time::Seconds XML::LibXML
+    && cpanm install DateTime DBI Dotenv LWP::UserAgent Time::Moment Time::Piece Time::Seconds XML::LibXML DBD::mysql
 
 COPY convert.pl ./
 
