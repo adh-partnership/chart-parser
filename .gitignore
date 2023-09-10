@@ -1,3 +1,7 @@
 .vscode
 .env
 d-tpp.xml
+
+# Added by cargo
+
+/target
