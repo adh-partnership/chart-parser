@@ -29,8 +29,11 @@ format:
 default: build
 
 build:
-	cargo build
+	@DRY_RUN=1 scripts/build.sh
 
+release:
+	@scripts/build.sh
+	
 test:
 	RUST_BACKTRACE=1 cargo test --tests --bins
 
