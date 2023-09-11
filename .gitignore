@@ -1,7 +1,6 @@
 .vscode
 .env
 d-tpp.xml
-
-# Added by cargo
-
+d-TPP*xml
 /target
+test.sh
