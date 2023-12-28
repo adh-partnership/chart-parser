@@ -1,5 +1,5 @@
 .vscode
-.env
+.env*
 d-tpp.xml
 d-TPP*xml
 /target
