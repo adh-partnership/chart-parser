@@ -133,7 +133,7 @@ async fn main() -> anyhow::Result<()> {
     .await;
 
     println!("Cleaning up old charts");
-    sqlx::query("DELETE FROM airport_charts WHERE cycle != ?")
+    sqlx::query(format!("DELETE FROM {} WHERE cycle != ?", table).as_str())
         .bind(&cycle)
         .execute(&pool)
         .await?;
