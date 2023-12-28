@@ -66,6 +66,12 @@ async fn main() -> anyhow::Result<()> {
         println!("Today is not a cycle day but FORCE is set. Continuing.");
     }
 
+    let table = if let Ok(db_table) = std::env::var("DB_TABLE") {
+        db_table
+    } else {
+        "airport_charts".to_string()
+    };
+
     if std::env::var("STATES").is_err() {
         println!("STATES environment variable not set. Exiting.");
         std::process::exit(1);
@@ -115,7 +121,16 @@ async fn main() -> anyhow::Result<()> {
     }
 
     println!("Parsing d-tpp.xml");
-    parse_data("d-tpp.xml", &states, &cycle, &start_date, &end_date, &pool).await;
+    parse_data(
+        "d-tpp.xml",
+        &states,
+        &cycle,
+        &start_date,
+        &end_date,
+        &pool,
+        &table,
+    )
+    .await;
 
     println!("Cleaning up old charts");
     sqlx::query("DELETE FROM airport_charts WHERE cycle != ?")
@@ -135,6 +150,7 @@ async fn parse_data(
     start_date: &str,
     end_date: &str,
     pool: &sqlx::mysql::MySqlPool,
+    table: &str,
 ) {
     let file = File::open(file_path).expect("Failed to open XML file");
     let digital_tpp: DigitalTpp = serde_xml_rs::from_reader(file).expect("Failed to parse XML");
@@ -177,6 +193,7 @@ async fn parse_data(
                             &chart.chart_name,
                             &format!("https://aeronav.faa.gov/d-tpp/{}/{}", cycle, chart.pdf_name),
                             pool,
+                            &table,
                         )
                         .await;
                         chart_count += 1;
@@ -203,11 +220,10 @@ async fn update_chart(
     chart_name: &str,
     pdf_url: &str,
     pool: &sqlx::mysql::MySqlPool,
+    table: &str,
 ) {
-    sqlx::query(
-        r#"
-        INSERT INTO airport_charts
-            (id, airport_id, cycle, from_date, to_date, chart_code, chart_name, chart_url)
+    sqlx::query(&format!(
+        "INSERT INTO {} (id, airport_id, cycle, from_date, to_date, chart_code, chart_name, chart_url)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
             cycle = VALUES(cycle),
@@ -215,9 +231,9 @@ async fn update_chart(
             to_date = VALUES(to_date),
             chart_code = VALUES(chart_code),
             chart_name = VALUES(chart_name),
-            chart_url = VALUES(chart_url)
-        "#,
-    )
+            chart_url = VALUES(chart_url)",
+        table
+    ))
     .bind(chart_id)
     .bind(apt_ident)
     .bind(cycle)
