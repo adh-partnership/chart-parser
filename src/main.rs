@@ -1,6 +1,7 @@
 extern crate serde;
 extern crate serde_xml_rs;
 
+use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 
@@ -48,6 +49,8 @@ struct DigitalTpp {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
+    dotenv().ok();
+
     let today = chrono::Local::now().format("%Y-%m-%d").to_string();
 
     println!("ADH Chart Parser v2");
