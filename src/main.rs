@@ -107,8 +107,7 @@ async fn main() {
     }
 
     info!("Parsing {DOWNLOAD_FILE_NAME}");
-    // TODO parse the file, looks like, and pass in the DB connection
-    if let Err(e) = parse_data(&states, cycle.code, &cycle.start, "TODO???", &pool, &table).await {
+    if let Err(e) = parse_data(&states, cycle.code, &cycle.start, &cycle.end, &pool, &table).await {
         error!("Could not parse the document: {e}");
         process::exit(1);
     }
@@ -131,7 +130,7 @@ async fn parse_data(
     states: &[String],
     cycle: u16,
     start_date: &NaiveDate,
-    end_date: &str,
+    end_date: &NaiveDate,
     pool: &MySqlPool,
     table: &str,
 ) -> Result<()> {
@@ -169,7 +168,7 @@ async fn parse_data(
                             &apt_ident,
                             cycle,
                             &start_date.format(DATE_FORMAT).to_string(),
-                            end_date,
+                            &end_date.format(DATE_FORMAT).to_string(),
                             &chart_type,
                             &chart.chart_name,
                             &format!("https://aeronav.faa.gov/d-tpp/{}/{}", cycle, chart.pdf_name),
@@ -184,7 +183,8 @@ async fn parse_data(
         }
     }
 
-    todo!()
+    info!("Processed {chart_count} chartts for {airport_count} airports");
+    Ok(())
 }
 
 /// Update the chart in the database.

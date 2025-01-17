@@ -22,8 +22,22 @@ impl Airac {
     }
 }
 
-// TODO I guess I'll have to calculate end dates for these
-// or put the end dates into the struct itself?
+#[derive(Debug, Clone)]
+pub struct AiracWithEnd {
+    pub code: u16,
+    pub start: NaiveDate,
+    pub end: NaiveDate,
+}
+
+impl From<(Airac, NaiveDate)> for AiracWithEnd {
+    fn from(pair: (Airac, NaiveDate)) -> Self {
+        Self {
+            code: pair.0.code,
+            start: pair.0.start,
+            end: pair.1,
+        }
+    }
+}
 
 /// Static collection of AIRAC cycle info.
 ///
@@ -89,7 +103,7 @@ pub fn is_cycle_date(date: &str) -> bool {
 ///
 /// `None` is returned if the date falls outside the bounds
 /// of the static data.
-pub fn get_cycle_for(date: &str) -> Option<Airac> {
+pub fn get_cycle_for(date: &str) -> Option<AiracWithEnd> {
     // parse the String into a date for use in comparison
     let dt = match NaiveDate::parse_from_str(date, DATE_FORMAT) {
         Ok(dt) => dt,
@@ -106,8 +120,30 @@ pub fn get_cycle_for(date: &str) -> Option<Airac> {
     */
     for (a, b) in AIRAC_DATES.iter().tuples() {
         if a.start <= dt && dt <= b.start {
-            return Some(a.to_owned());
+            let end = b.start.checked_sub_days(chrono::Days::new(1)).unwrap();
+            return Some((a.to_owned(), end).into());
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{get_cycle_for, is_cycle_date};
+
+    #[test]
+    fn test_is_cycle_date() {
+        assert!(is_cycle_date("2024-01-25"));
+        assert!(is_cycle_date("2025-01-23"));
+        assert!(!is_cycle_date("2025-01-24"));
+        assert!(!is_cycle_date("2025-06-13"));
+    }
+
+    #[test]
+    fn test_get_cycle_for() {
+        let cycle = get_cycle_for("2024-02-20").unwrap();
+        assert_eq!(cycle.code, 2401);
+        assert_eq!(cycle.start.format("%Y-%m-%d").to_string(), "2024-01-25");
+        assert_eq!(cycle.end.format("%Y-%m-%d").to_string(), "2024-02-21");
+    }
 }
